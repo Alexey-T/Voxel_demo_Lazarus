@@ -35,7 +35,7 @@ const
  SizeY=200;
 
 type
-  lrgarr=array[0..65534] of byte;
+  TLargeArray=array[0..65534] of byte;
 const
  pal:array[1..384] of byte=(
   0,0,0,48,48,48,1,0,43,1,3,43,2,5,44,2,7,44,3,9,45,4,11,46,5,13,47,6,15,48,
@@ -55,7 +55,7 @@ const
   63,63,63,63,63,63,63,63,63,48,48,48,63,63,63,63,63,63);
 
 VAR
-  MP,Scr      : ^lrgarr;
+  MP,Scr      : TLargeArray;
   rng         : array[0..320] of byte;
   dir,x,y   : integer;
 
@@ -71,14 +71,14 @@ var xn,yn,dxy,p1,p2,p3,p4:word;
 begin
   if (x2-x1<2) and (y2-y1<2) then
    exit;
-  p1:=mp^[WORD(256*y1+x1)]; p2:=mp^[WORD(256*y2+x1)]; p3:=mp^[WORD(256*y1+x2)];
-  p4:=mp^[WORD(256*y2+x2)]; xn:=((x2+x1) shr 1) and $ffff; yn:=((y2+y1) shr 1) and $ffff;
+  p1:=mp[WORD(256*y1+x1)]; p2:=mp[WORD(256*y2+x1)]; p3:=mp[WORD(256*y1+x2)];
+  p4:=mp[WORD(256*y2+x2)]; xn:=((x2+x1) shr 1) and $ffff; yn:=((y2+y1) shr 1) and $ffff;
   dxy:=5*(x2-x1+y2-y1) div 3;
-  if mp^[WORD(256*y1+xn)]=0 then mp^[WORD(256*y1+xn)]:=ncol(p1+p3,dxy,2);
-  if mp^[WORD(256*yn+x1)]=0 then mp^[WORD(256*yn+x1)]:=ncol(p1+p2,dxy,2);
-  if mp^[WORD(256*yn+x2)]=0 then mp^[WORD(256*yn+x2)]:=ncol(p3+p4,dxy,2);
-  if mp^[WORD(256*y2+xn)]=0 then mp^[WORD(256*y2+xn)]:=ncol(p2+p4,dxy,2);
-  mp^[WORD(word(256*yn)+xn)]:=ncol(word(p1+p2+p3+p4),word(dxy),4);
+  if mp[WORD(256*y1+xn)]=0 then mp[WORD(256*y1+xn)]:=ncol(p1+p3,dxy,2);
+  if mp[WORD(256*yn+x1)]=0 then mp[WORD(256*yn+x1)]:=ncol(p1+p2,dxy,2);
+  if mp[WORD(256*yn+x2)]=0 then mp[WORD(256*yn+x2)]:=ncol(p3+p4,dxy,2);
+  if mp[WORD(256*y2+xn)]=0 then mp[WORD(256*y2+xn)]:=ncol(p2+p4,dxy,2);
+  mp[WORD(word(256*yn)+xn)]:=ncol(word(p1+p2+p3+p4),word(dxy),4);
   plasma(x1,y1,xn,yn); plasma(xn,y1,x2,yn);
   plasma(x1,yn,xn,y2); plasma(xn,yn,x2,y2);
 end;
@@ -86,9 +86,9 @@ end;
 procedure draw(xp,yp,dir:integer);
 var z,zobs,ix,iy,iy1,iyp,ixp,x,y,s,csf,snf,mpc,i,j:integer;
 begin
-  fillchar(rng,sizeof(rng),200); zobs:=100+mp^[WORD(256*yp+xp)];
+  fillchar(rng,sizeof(rng),200); zobs:=100+mp[WORD(256*yp+xp)];
   csf:=round(256*cos((dir)/180*pi)); snf:=round(256*sin((dir)/180*pi));
-  fillchar(scr^,64000,0);
+  fillchar(scr,64000,0);
   for iy:=yp to yp+55 do
    begin
     iy1:=1+2*(iy-yp); s:=4+300 div iy1;
@@ -99,13 +99,13 @@ begin
       x:=160+360*(ix-xp) div iy1;
       if (x>=0) and (x+s<=318) then
        begin
-        z:=mp^[WORD(iyp shl 8+ixp)]; mpc:=z shr 1;
+        z:=mp[WORD(iyp shl 8+ixp)]; mpc:=z shr 1;
         if z<47 then z:=46;  y:=100+(zobs-z)*30 div iy1;
         if (y<=199) and (y>=0) then
          for j:=x to x+s do
           begin
            for i:=y to rng[j] do
-            scr^[WORD(320*i+j)]:=mpc;
+            scr[WORD(320*i+j)]:=mpc;
            if y<rng[WORD(j)] then rng[WORD(j)]:=y
           end;
       end;
@@ -115,8 +115,13 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  randomize; x:=0; y:=0; dir:=0; new(mp); fillchar(mp^,65535,0);
-  new(scr); mp^[$0000]:=128; plasma(0,0,256,256);
+  randomize;
+  x:=0;
+  y:=0;
+  dir:=0;
+  fillchar(mp,65535,0);
+  mp[$0000]:=128;
+  plasma(0,0,256,256);
 
   Panel1.Width:= SizeX * 2;
   Panel1.Height:= SizeY * 2;
@@ -137,7 +142,7 @@ begin
   for i:= 0 to SizeX-1 do
     for j:= 0 to SizeY-1 do
     begin
-      NColor:= Scr^[j*SizeX+i];
+      NColor:= Scr[j*SizeX+i];
       IndexPal:= NColor*3;
       NB:= pal[IndexPal+1] shl 2;
       NG:= pal[IndexPal+2] shl 2;
