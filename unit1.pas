@@ -127,8 +127,8 @@ begin
   bmp:= TBitmap.Create;
   bmp.SetSize(SizeX*2, SizeY*2);
 
-  Panel1.Width:= SizeX*2;
-  Panel1.Height:= SizeY*2;
+  Panel1.Width:= SizeX;
+  Panel1.Height:= SizeY;
   ClientWidth:= Panel1.Width;
   ClientHeight:= Panel1.Height;
 end;
@@ -149,11 +149,7 @@ begin
       ByteG:= pal[IndexPal+2] shl 2;
       ByteR:= pal[IndexPal+3] shl 2;
       NColor:= (ByteR shl 16) + (ByteG shl 8) + ByteB;
-      //paint 2x2 pixels
-      C.Pixels[i*2, j*2]:= NColor;
-      C.Pixels[i*2+1, j*2]:= NColor;
-      C.Pixels[i*2, j*2+1]:= NColor;
-      C.Pixels[i*2+1, j*2+1]:= NColor;
+      C.Pixels[i, j]:= NColor;
     end;
 end;
 
