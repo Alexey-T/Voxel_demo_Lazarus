@@ -177,14 +177,14 @@ begin
      biYPelsPerMeter := 0;
      biClrUsed := 0;
      biClrImportant := 0;
- end;
+  end;
   for I := 0 to ((SizeOf(pal) div 3) - 1) do begin
      with Header^.bmiColors[I] do begin
         rgbBlue := pal[I * 3 + 3] shl 2;
         rgbGreen := pal[I * 3 + 2] shl 2;
         rgbRed := pal[I * 3 + 1] shl 2;
      end
- end;
+  end;
   {$ENDIF}
 
   ClientWidth:= SizeX;
@@ -244,7 +244,8 @@ begin
 end;
 
 procedure TForm1.UpdateImage;
-  var Tick, Tick2:Int64;
+var 
+  Tick, Tick2: Int64;
 begin
   {$ifdef CODE3}
   if FreqSupported then begin
