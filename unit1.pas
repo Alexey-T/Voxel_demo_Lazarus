@@ -4,6 +4,7 @@ unit Unit1;
 {$R-}
 
 {$DEFINE CODE1}
+//CODE1..CODE2 have the same speed
 //CODE3 is for Windows, 100x faster
 
 interface
