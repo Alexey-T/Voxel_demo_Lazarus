@@ -23,6 +23,7 @@ type
   private
     MP, Scr: TLargeArray;
     Dir, PosX, PosY: integer;
+    bmp: TBitmap;
   public
 
   end;
@@ -122,6 +123,9 @@ begin
   MP[$0000]:=128;
   plasma(0,0,256,256,MP);
 
+  bmp:= TBitmap.Create;
+  bmp.SetSize(SizeX*2, SizeY*2);
+
   Panel1.Width:= SizeX*2;
   Panel1.Height:= SizeY*2;
   ClientWidth:= Panel1.Width;
@@ -137,7 +141,7 @@ var
 begin
   draw(PosX,PosY,Dir,Scr,MP);
 
-  C:= Panel1.Canvas;
+  C:= bmp.Canvas;
   for i:= 0 to SizeX-1 do
     for j:= 0 to SizeY-1 do
     begin
@@ -153,6 +157,8 @@ begin
       C.Pixels[i*2, j*2+1]:= NColor;
       C.Pixels[i*2+1, j*2+1]:= NColor;
     end;
+
+  Panel1.Canvas.Draw(0, 0, bmp);
 end;
 
 procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
