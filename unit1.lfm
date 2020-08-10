@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 1530
+  Left = 478
   Height = 464
-  Top = 185
+  Top = 205
   Width = 673
   BorderStyle = bsDialog
   Caption = 'Voxel - 4 arrows to move'
@@ -9,17 +9,26 @@ object Form1: TForm1
   ClientWidth = 673
   KeyPreview = True
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   OnKeyDown = FormKeyDown
   Position = poScreenCenter
-  LCLVersion = '2.1.0.0'
+  LCLVersion = '1.8.4.0'
+  object Image1: TImage
+    Left = 0
+    Height = 464
+    Top = 0
+    Width = 673
+    Align = alClient
+    Visible = False
+  end
   object Panel1: TPanel
     Left = 0
-    Height = 296
+    Height = 464
     Top = 0
-    Width = 408
-    BevelOuter = bvNone
-    Caption = 'Panel1'
+    Width = 673
+    Align = alClient
     TabOrder = 0
+    Visible = False
     OnPaint = Panel1Paint
   end
 end

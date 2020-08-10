@@ -3,9 +3,13 @@ unit Unit1;
 {$mode objfpc}{$H+}
 {$R-}
 
+{$DEFINE CODE1}
+//CODE3 is for Windows, 100x faster
+
 interface
 
 uses
+  {$ifdef CODE3}Windows,{$endif}
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ExtCtrls,
   LCLType, LCLProc;
 
@@ -16,15 +20,25 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
+    Image1: TImage;
     Panel1: TPanel;
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure Panel1Paint(Sender: TObject);
   private
     MP, Scr: TLargeArray;
     Dir, PosX, PosY: integer;
     bmp: TBitmap;
+    Freq: Int64;
+    {$ifdef CODE3}
+    FreqSupported: Boolean;
+    Header: Windows.PBitmapInfo;
+    {$endif}
+    procedure DoNext;
     procedure UpdateBitmap(C: TCanvas);
+    procedure MyUpdateBitmap(C: TCanvas);
+    procedure UpdateImage;
   public
 
   end;
@@ -37,8 +51,8 @@ implementation
 {$R *.lfm}
 
 const
- SizeX=320;
- SizeY=200;
+  SizeX=320;
+  SizeY=200;
 
 const
   pal:array[1..384] of byte=(
@@ -115,7 +129,17 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
+var
+  I: Integer;
 begin
+  {$ifdef CODE3}
+  QueryPerformanceFrequency(Freq);
+  FreqSupported := Freq <> 0;
+  if not FreqSupported then Freq := 1000;
+  {$else}
+  Freq:= 1000;
+  {$endif}
+
   Randomize;
   PosX:=0;
   PosY:=0;
@@ -124,13 +148,57 @@ begin
   MP[$0000]:=128;
   plasma(0,0,256,256,MP);
 
+  {$IFDEF CODE1}
   bmp:= TBitmap.Create;
-  bmp.SetSize(SizeX*2, SizeY*2);
+  bmp.SetSize(SizeX, SizeY);
+  Panel1.Visible := True;
+  {$ENDIF}
 
-  Panel1.Width:= SizeX;
-  Panel1.Height:= SizeY;
-  ClientWidth:= Panel1.Width;
-  ClientHeight:= Panel1.Height;
+  {$IF defined(CODE2) or defined(CODE3)}
+  Image1.Width:= SizeX;
+  Image1.Height:= SizeY;
+  Image1.Picture.Bitmap.Width := SizeX;
+  Image1.Picture.Bitmap.Height := SizeY;
+  Image1.Visible := True;
+  {$IFEND}
+
+  {$IFDEF CODE3}
+  Header := GetMem(SizeOf(TBitmapInfoHeader) + (SizeOf(TRGBQuad) * 256));
+  with Header^.bmiHeader do begin
+     biSize := SizeOf(TBitmapInfoHeader);
+     biWidth := SizeX;
+     biHeight := -SizeY;
+     biPlanes := 1;
+     biBitCount := 8;
+     biCompression := BI_RGB;
+     biSizeImage := SizeX * SizeY;
+     biXPelsPerMeter := 0;
+     biYPelsPerMeter := 0;
+     biClrUsed := 0;
+     biClrImportant := 0;
+ end;
+  for I := 0 to ((SizeOf(pal) div 3) - 1) do begin
+     with Header^.bmiColors[I] do begin
+        rgbBlue := pal[I * 3 + 3] shl 2;
+        rgbGreen := pal[I * 3 + 2] shl 2;
+        rgbRed := pal[I * 3 + 1] shl 2;
+     end
+ end;
+  {$ENDIF}
+
+  ClientWidth:= SizeX;
+  ClientHeight:= SizeY;
+
+  {$IF defined(CODE2) or defined(CODE3)}
+  UpdateImage;
+  {$IFEND}
+end;
+
+procedure TForm1.FormDestroy(Sender: TObject);
+begin
+  {$IFDEF CODE3}
+  FreeMem(Header);
+  {$ENDIF}
 end;
 
 procedure TForm1.UpdateBitmap(C: TCanvas);
@@ -153,10 +221,80 @@ begin
     end;
 end;
 
-procedure TForm1.Panel1Paint(Sender: TObject);
+procedure TForm1.MyUpdateBitmap(C: TCanvas);
 begin
+  {$ifdef CODE3}
+  draw(PosX,PosY,Dir,Scr,MP);
+  SetDIBitsToDevice(
+    C.Handle,
+    0,
+    0,
+    SizeX,
+    SizeY,
+    0,
+    0,
+    0,
+    SizeY,
+    @Scr,
+    Header^,
+    DIB_RGB_COLORS
+  );
+  {$endif}
+end;
+
+procedure TForm1.UpdateImage;
+  var Tick, Tick2:Int64;
+begin
+  {$ifdef CODE3}
+  if FreqSupported then begin
+    QueryPerformanceCounter(Tick);
+  end
+  else begin
+    Tick := GetTickCount64;
+  end;
+  {$else}
+  Tick := GetTickCount64;
+  {$endif}
+
+  {$IFDEF CODE1}
   UpdateBitmap(bmp.Canvas);
   Panel1.Canvas.Draw(0, 0, bmp);
+  {$ENDIF}
+
+  {$IFDEF CODE2}
+  Image1.Picture.Bitmap.BeginUpdate(True);
+  UpdateBitmap(Image1.Picture.Bitmap.Canvas);
+  Image1.Picture.Bitmap.EndUpdate;
+  {$ENDIF}
+
+  {$IFDEF CODE3}
+  Image1.Picture.Bitmap.BeginUpdate(True);
+  MyUpdateBitmap(Image1.Picture.Bitmap.Canvas);
+  Image1.Picture.Bitmap.EndUpdate;
+  {$ENDIF}
+
+  {$ifdef CODE3}
+  if FreqSupported then begin
+     QueryPerformanceCounter(Tick2);
+  end
+  else begin
+     Tick2 := GetTickCount64;
+  end;
+  {$else}
+  Tick2 := GetTickCount64;
+  {$endif}
+
+  Caption := FloatToStr((Tick2 - Tick)*1000/Freq) + 'ms';
+end;
+
+procedure TForm1.DoNext;
+begin
+  {$IFDEF CODE1}
+  Panel1.Repaint;
+  {$ENDIF}
+  {$IF defined(CODE2) or defined(CODE3)}
+  UpdateImage;
+  {$ENDIF}
 end;
 
 procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -166,7 +304,7 @@ begin
     dec(Dir,10);
     Dir:=Dir mod 360;
     key:= 0;
-    Panel1.Repaint;
+    DoNext;
     exit;
   end;
 
@@ -175,7 +313,7 @@ begin
     inc(Dir,10);
     Dir:=Dir mod 360;
     key:= 0;
-    Panel1.Repaint;
+    DoNext;
     exit;
   end;
 
@@ -184,7 +322,7 @@ begin
     PosY:=PosY+round(5*cos((Dir)/180*pi));
     PosX:=PosX+round(5*sin((Dir)/180*pi));
     key:= 0;
-    Panel1.Repaint;
+    DoNext;
     exit;
   end;
 
@@ -193,10 +331,14 @@ begin
     PosY:=PosY-round(5*cos((Dir)/180*pi));
     PosX:=PosX-round(5*sin((Dir)/180*pi));
     key:= 0;
-    Panel1.Repaint;
+    DoNext;
     exit;
   end;
 end;
 
-end.
+procedure TForm1.Panel1Paint(Sender: TObject);
+begin
+  UpdateImage;
+end;
 
+end.
