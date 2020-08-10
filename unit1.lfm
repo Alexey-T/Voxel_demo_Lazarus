@@ -4,7 +4,7 @@ object Form1: TForm1
   Top = 185
   Width = 673
   BorderStyle = bsDialog
-  Caption = 'Voxel demo'
+  Caption = 'Voxel - 4 arrows to move'
   ClientHeight = 464
   ClientWidth = 673
   KeyPreview = True
