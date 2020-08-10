@@ -10,6 +10,9 @@ uses
   LCLType, LCLProc;
 
 type
+  TLargeArray=array[0..65534] of byte;
+
+type
   { TForm1 }
 
   TForm1 = class(TForm)
@@ -18,7 +21,8 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure Panel1Paint(Sender: TObject);
   private
-
+    MP, Scr: TLargeArray;
+    Dir, PosX, PosY: integer;
   public
 
   end;
@@ -34,10 +38,8 @@ const
  SizeX=320;
  SizeY=200;
 
-type
-  TLargeArray=array[0..65534] of byte;
 const
- pal:array[1..384] of byte=(
+  pal:array[1..384] of byte=(
   0,0,0,48,48,48,1,0,43,1,3,43,2,5,44,2,7,44,3,9,45,4,11,46,5,13,47,6,15,48,
   7,17,49,8,19,50,9,21,51,10,22,52,11,24,52,12,26,54,13,28,54,14,30,56,15,32,
   56,16,34,58,17,34,58,17,36,58,18,38,60,19,40,60,20,42,62,21,44,62,10,31,0,
@@ -54,11 +56,6 @@ const
   8,57,40,8,56,39,7,56,38,6,55,37,5,55,35,4,54,33,4,54,31,2,32,32,32,63,63,63,
   63,63,63,63,63,63,63,63,63,48,48,48,63,63,63,63,63,63);
 
-VAR
-  MP,Scr      : TLargeArray;
-  rng         : array[0..320] of byte;
-  dir,x,y   : integer;
-
 function ncol(mc,n,dvd:integer):integer;
 var loc:integer;
 begin
@@ -66,7 +63,7 @@ begin
   if loc>250 then ncol:=250; if loc<5 then ncol:=5
 end;
 
-procedure plasma(x1,y1,x2,y2:word);
+procedure plasma(x1,y1,x2,y2:word; var mp: TLargeArray);
 var xn,yn,dxy,p1,p2,p3,p4:word;
 begin
   if (x2-x1<2) and (y2-y1<2) then
@@ -79,16 +76,18 @@ begin
   if mp[WORD(256*yn+x2)]=0 then mp[WORD(256*yn+x2)]:=ncol(p3+p4,dxy,2);
   if mp[WORD(256*y2+xn)]=0 then mp[WORD(256*y2+xn)]:=ncol(p2+p4,dxy,2);
   mp[WORD(word(256*yn)+xn)]:=ncol(word(p1+p2+p3+p4),word(dxy),4);
-  plasma(x1,y1,xn,yn); plasma(xn,y1,x2,yn);
-  plasma(x1,yn,xn,y2); plasma(xn,yn,x2,y2);
+  plasma(x1,y1,xn,yn,mp); plasma(xn,y1,x2,yn,mp);
+  plasma(x1,yn,xn,y2,mp); plasma(xn,yn,x2,y2,mp);
 end;
 
-procedure draw(xp,yp,dir:integer);
-var z,zobs,ix,iy,iy1,iyp,ixp,x,y,s,csf,snf,mpc,i,j:integer;
+procedure draw(xp,yp,dir:integer; var scr,mp: TLargeArray);
+var
+  z,zobs,ix,iy,iy1,iyp,ixp,x,y,s,csf,snf,mpc,i,j:integer;
+  rng: array[0..320] of byte;
 begin
   fillchar(rng,sizeof(rng),200); zobs:=100+mp[WORD(256*yp+xp)];
   csf:=round(256*cos((dir)/180*pi)); snf:=round(256*sin((dir)/180*pi));
-  fillchar(scr,64000,0);
+  fillchar(scr,SizeOf(scr),0);
   for iy:=yp to yp+55 do
    begin
     iy1:=1+2*(iy-yp); s:=4+300 div iy1;
@@ -115,16 +114,16 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  randomize;
-  x:=0;
-  y:=0;
-  dir:=0;
-  fillchar(mp,65535,0);
-  mp[$0000]:=128;
-  plasma(0,0,256,256);
+  Randomize;
+  PosX:=0;
+  PosY:=0;
+  Dir:=0;
+  FillChar(MP,SizeOf(MP),0);
+  MP[$0000]:=128;
+  plasma(0,0,256,256,MP);
 
-  Panel1.Width:= SizeX * 2;
-  Panel1.Height:= SizeY * 2;
+  Panel1.Width:= SizeX*2;
+  Panel1.Height:= SizeY*2;
   ClientWidth:= Panel1.Width;
   ClientHeight:= Panel1.Height;
 end;
@@ -133,10 +132,10 @@ procedure TForm1.Panel1Paint(Sender: TObject);
 var
   C: TCanvas;
   NColor, IndexPal: integer;
-  NR, NG, NB: byte;
+  ByteR, ByteG, ByteB: byte;
   i, j: integer;
 begin
-  draw(x,y,dir);
+  draw(PosX,PosY,Dir,Scr,MP);
 
   C:= Panel1.Canvas;
   for i:= 0 to SizeX-1 do
@@ -144,11 +143,11 @@ begin
     begin
       NColor:= Scr[j*SizeX+i];
       IndexPal:= NColor*3;
-      NB:= pal[IndexPal+1] shl 2;
-      NG:= pal[IndexPal+2] shl 2;
-      NR:= pal[IndexPal+3] shl 2;
-      NColor:= (NR shl 16) + (NG shl 8) + NB;
-      //set 4 pixels, coz scale is 2x
+      ByteB:= pal[IndexPal+1] shl 2;
+      ByteG:= pal[IndexPal+2] shl 2;
+      ByteR:= pal[IndexPal+3] shl 2;
+      NColor:= (ByteR shl 16) + (ByteG shl 8) + ByteB;
+      //paint 2x2 pixels
       C.Pixels[i*2, j*2]:= NColor;
       C.Pixels[i*2+1, j*2]:= NColor;
       C.Pixels[i*2, j*2+1]:= NColor;
@@ -160,8 +159,8 @@ procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState)
 begin
   if (Key=VK_LEFT) and (shift=[]) then
   begin
-    dec(dir,10);
-    dir:=dir mod 360;
+    dec(Dir,10);
+    Dir:=Dir mod 360;
     key:= 0;
     Panel1.Repaint;
     exit;
@@ -169,8 +168,8 @@ begin
 
   if (Key=VK_RIGHT) and (shift=[]) then
   begin
-    inc(dir,10);
-    dir:=dir mod 360;
+    inc(Dir,10);
+    Dir:=Dir mod 360;
     key:= 0;
     Panel1.Repaint;
     exit;
@@ -178,8 +177,8 @@ begin
 
   if (Key=VK_UP) and (shift=[]) then
   begin
-    y:=y+round(5*cos((dir)/180*pi));
-    x:=x+round(5*sin((dir)/180*pi));
+    PosY:=PosY+round(5*cos((Dir)/180*pi));
+    PosX:=PosX+round(5*sin((Dir)/180*pi));
     key:= 0;
     Panel1.Repaint;
     exit;
@@ -187,8 +186,8 @@ begin
 
   if (Key=VK_DOWN) and (shift=[]) then
   begin
-    y:=y-round(5*cos((dir)/180*pi));
-    x:=x-round(5*sin((dir)/180*pi));
+    PosY:=PosY-round(5*cos((Dir)/180*pi));
+    PosX:=PosX-round(5*sin((Dir)/180*pi));
     key:= 0;
     Panel1.Repaint;
     exit;
