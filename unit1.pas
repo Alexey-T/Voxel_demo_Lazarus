@@ -24,6 +24,7 @@ type
     MP, Scr: TLargeArray;
     Dir, PosX, PosY: integer;
     bmp: TBitmap;
+    procedure UpdateBitmap(C: TCanvas);
   public
 
   end;
@@ -132,16 +133,13 @@ begin
   ClientHeight:= Panel1.Height;
 end;
 
-procedure TForm1.Panel1Paint(Sender: TObject);
+procedure TForm1.UpdateBitmap(C: TCanvas);
 var
-  C: TCanvas;
   NColor, IndexPal: integer;
   ByteR, ByteG, ByteB: byte;
   i, j: integer;
 begin
   draw(PosX,PosY,Dir,Scr,MP);
-
-  C:= bmp.Canvas;
   for i:= 0 to SizeX-1 do
     for j:= 0 to SizeY-1 do
     begin
@@ -157,7 +155,11 @@ begin
       C.Pixels[i*2, j*2+1]:= NColor;
       C.Pixels[i*2+1, j*2+1]:= NColor;
     end;
+end;
 
+procedure TForm1.Panel1Paint(Sender: TObject);
+begin
+  UpdateBitmap(bmp.Canvas);
   Panel1.Canvas.Draw(0, 0, bmp);
 end;
 
