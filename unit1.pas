@@ -118,29 +118,36 @@ begin
   randomize; x:=0; y:=0; dir:=0; new(mp); fillchar(mp^,65535,0);
   new(scr); mp^[$0000]:=128; plasma(0,0,256,256);
 
-  Panel1.Width:= SizeX;
-  Panel1.Height:= SizeY;
+  Panel1.Width:= SizeX * 2;
+  Panel1.Height:= SizeY * 2;
+  ClientWidth:= Panel1.Width;
+  ClientHeight:= Panel1.Height;
 end;
 
 procedure TForm1.Panel1Paint(Sender: TObject);
 var
-  cx, cy: integer;
   C: TCanvas;
-  NCol, i_pal: integer;
+  NColor, IndexPal: integer;
   NR, NG, NB: byte;
+  i, j: integer;
 begin
   draw(x,y,dir);
 
   C:= Panel1.Canvas;
-  for cx:= 0 to SizeX-1 do
-    for cy:= 0 to SizeY-1 do
+  for i:= 0 to SizeX-1 do
+    for j:= 0 to SizeY-1 do
     begin
-      NCol:= Scr^[cy*SizeX+cx];
-      i_pal:= NCol*3;
-      NB:= pal[i_pal+1];
-      NG:= pal[i_pal+2];
-      NR:= pal[i_pal+3];
-      C.Pixels[cx, cy]:= (NR shl 16) + (NG shl 8) + NB;
+      NColor:= Scr^[j*SizeX+i];
+      IndexPal:= NColor*3;
+      NB:= pal[IndexPal+1] shl 2;
+      NG:= pal[IndexPal+2] shl 2;
+      NR:= pal[IndexPal+3] shl 2;
+      NColor:= (NR shl 16) + (NG shl 8) + NB;
+      //set 4 pixels, coz scale is 2x
+      C.Pixels[i*2, j*2]:= NColor;
+      C.Pixels[i*2+1, j*2]:= NColor;
+      C.Pixels[i*2, j*2+1]:= NColor;
+      C.Pixels[i*2+1, j*2+1]:= NColor;
     end;
 end;
 
