@@ -230,11 +230,13 @@ procedure TForm1.FormCreate(Sender: TObject);
       if IntfImage.DataDescription.ByteOrder = riboLSBFirst then
         palIntf[NColor]:= NtoLE(LongWord((ByteR shl IntfImage.DataDescription.RedShift) +
                           (ByteG shl IntfImage.DataDescription.GreenShift) +
-                          (ByteB shl IntfImage.DataDescription.BlueShift)))
+                          (ByteB shl IntfImage.DataDescription.BlueShift) +
+                          (255 shl IntfImage.DataDescription.AlphaShift)))
       else
         palIntf[NColor]:= NtoBE(LongWord((ByteR shl IntfImage.DataDescription.RedShift) +
                           (ByteG shl IntfImage.DataDescription.GreenShift) +
-                          (ByteB shl IntfImage.DataDescription.BlueShift)));
+                          (ByteB shl IntfImage.DataDescription.BlueShift) +
+                          (255 shl IntfImage.DataDescription.AlphaShift)));
     end;
   end;
   {$ENDIF}
@@ -299,7 +301,7 @@ begin
   {$ENDIF}
 
   {$IFDEF CODE5}
-  IntfImage := TLazIntfImage.Create(SizeX, SizeY, [riqfRGB]);
+  IntfImage := TLazIntfImage.Create(SizeX, SizeY, [riqfRGB, riqfAlpha]);
   IntfImage.CreateData;
   ComputePalIntf;
   {$ENDIF}
@@ -404,8 +406,7 @@ begin
     end;
   end;
   IntfImage.EndUpdate;
-  IntfImage.CreateBitmaps(Bitmap, Mask, True);
-  bmp.Handle := Bitmap;
+  bmp.LoadFromIntfImage(IntfImage);
   C.Draw(0, 0, bmp);
 end;
 {$IFEND}
