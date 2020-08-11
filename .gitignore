@@ -1,4 +1,6 @@
 lib/
 voxel_lazarus
+new_voxel_lazarus
+*.dbg
 *.exe
 *.lps
