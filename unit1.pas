@@ -20,8 +20,7 @@ type
   { TForm1 }
 
   TForm1 = class(TForm)
-			Image1: TImage;
-			Panel1: TPanel;
+    Panel1: TPanel;
     procedure FormCreate(Sender: TObject);
 		procedure FormDestroy(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -30,22 +29,21 @@ type
     MP, Scr: TLargeArray;
     Dir, PosX, PosY: integer;
     Freq:Int64;
-    {$IFDEF CODE1}
+    {$IF defined(CODE1) or defined(CODE3) or defined(CODE5)}
     bmp: TBitmap;
     {$ENDIF}
     {$IFDEF CODE3}
     Header:Windows.PBitmapInfo;
     {$ENDIF}
     {$IFDEF CODE4}
-    Bitmap:TBGRABitmap;
+    bgra:TBGRABitmap;
     {$ENDIF}
     {$IFDEF CODE5}
     IntfImage:TLazIntfImage;
-    Temp:TBitmap;
     {$ENDIF}
     {$IF defined(CODE1) or defined(CODE2)}
     procedure UpdateBitmap(C: TCanvas);
-    {$IFEND}
+    {$ENDIF}
     {$IFDEF CODE3}
     procedure MyUpdateBitmap(C: TCanvas);
     {$ENDIF}
@@ -88,6 +86,19 @@ const
   48,14,58,47,13,58,46,12,58,45,11,58,44,11,58,44,10,58,43,10,58,42,9,57,41,
   8,57,40,8,56,39,7,56,38,6,55,37,5,55,35,4,54,33,4,54,31,2,32,32,32,63,63,63,
   63,63,63,63,63,63,63,63,63,48,48,48,63,63,63,63,63,63);
+
+{$IF defined(CODE1) or defined(CODE2)}
+var
+  palColor: array[1..length(pal) div 3] of TColor;
+{$ENDIF}
+{$IFDEF CODE4}
+var
+  palBGRA: array[1..length(pal) div 3] of TBGRAPixel;
+{$ENDIF}
+{$IFDEF CODE5}
+var
+  palIntf: array[1..length(pal) div 3] of Longword;
+{$ENDIF}
 
 function GetFreq:Int64;
 begin
@@ -169,9 +180,93 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
-{$ifdef CODE3}
-  var I:Integer;
-{$endif}
+
+  {$IF defined(CODE1) or defined(CODE2)}
+  procedure ComputePalColor;
+  var
+    IndexPal, NColor: Integer;
+    ByteB, ByteG, ByteR: Byte;
+  begin
+    for NColor := 1 to length(palColor) do
+    begin
+      IndexPal:= NColor*3;
+      ByteR:= (pal[IndexPal+1] shl 2) + (pal[IndexPal+1] shr 4);
+      ByteG:= (pal[IndexPal+2] shl 2) + (pal[IndexPal+2] shr 4);
+      ByteB:= (pal[IndexPal+3] shl 2) + (pal[IndexPal+3] shr 4);
+      palColor[NColor]:= (ByteB shl 16) + (ByteG shl 8) + ByteR;
+    end;
+  end;
+  {$ENDIF}
+
+  {$IFDEF CODE4}
+  procedure ComputePalBGRA;
+  var
+    IndexPal, NColor: Integer;
+    ByteB, ByteG, ByteR: Byte;
+  begin
+    for NColor := 1 to length(palBGRA) do
+    begin
+      IndexPal:= NColor*3;
+      ByteR:= (pal[IndexPal+1] shl 2) + (pal[IndexPal+1] shr 4);
+      ByteG:= (pal[IndexPal+2] shl 2) + (pal[IndexPal+2] shr 4);
+      ByteB:= (pal[IndexPal+3] shl 2) + (pal[IndexPal+3] shr 4);
+      palBGRA[NColor]:= BGRABitmapTypes.BGRA(ByteR, ByteG, ByteB);
+    end;
+  end;
+  {$ENDIF}
+
+  {$IFDEF CODE5}
+  procedure ComputePalIntf;
+  var
+    IndexPal, NColor: Integer;
+    ByteB, ByteG, ByteR: Byte;
+  begin
+    for NColor := 1 to length(palIntf) do
+    begin
+      IndexPal:= NColor*3;
+      ByteR:= (pal[IndexPal+1] shl 2) + (pal[IndexPal+1] shr 4);
+      ByteG:= (pal[IndexPal+2] shl 2) + (pal[IndexPal+2] shr 4);
+      ByteB:= (pal[IndexPal+3] shl 2) + (pal[IndexPal+3] shr 4);
+      if IntfImage.DataDescription.ByteOrder = riboLSBFirst then
+        palIntf[NColor]:= NtoLE(LongWord((ByteR shl IntfImage.DataDescription.RedShift) +
+                          (ByteG shl IntfImage.DataDescription.GreenShift) +
+                          (ByteB shl IntfImage.DataDescription.BlueShift)))
+      else
+        palIntf[NColor]:= NtoBE(LongWord((ByteR shl IntfImage.DataDescription.RedShift) +
+                          (ByteG shl IntfImage.DataDescription.GreenShift) +
+                          (ByteB shl IntfImage.DataDescription.BlueShift)));
+    end;
+  end;
+  {$ENDIF}
+
+  {$IFDEF CODE3}
+  procedure PrepareBitmapHeader;
+  var I: integer;
+  begin
+    Header := GetMem(SizeOf(TBitmapInfoHeader) + (SizeOf(TRGBQuad) * 256));
+    with Header^.bmiHeader do begin
+       biSize := SizeOf(TBitmapInfoHeader);
+       biWidth := SizeX;
+       biHeight := -SizeY;
+       biPlanes := 1;
+       biBitCount := 8;
+       biCompression := BI_RGB;
+       biSizeImage := SizeX * SizeY;
+       biXPelsPerMeter := 0;
+       biYPelsPerMeter := 0;
+       biClrUsed := 0;
+       biClrImportant := 0;
+    end;
+    for I := 0 to ((SizeOf(pal) div 3) - 1) do begin
+       with Header^.bmiColors[I] do begin
+          rgbBlue := pal[I * 3 + 3] shl 2;
+          rgbGreen := pal[I * 3 + 2] shl 2;
+          rgbRed := pal[I * 3 + 1] shl 2;
+       end
+    end;
+  end;
+  {$ENDIF}
+
 begin
   Freq := GetFreq;
 
@@ -183,100 +278,68 @@ begin
   MP[$0000]:=128;
   plasma(0,0,256,256,MP);
 
-  {$IFDEF CODE1}
+  {$IF defined(CODE1) or defined(CODE3) or defined(CODE5)}
   bmp:= TBitmap.Create;
+  {$ENDIF}
+  {$IF defined(CODE1) or defined(CODE3)}
   bmp.SetSize(SizeX, SizeY);
-  Panel1.Visible := True;
   {$ENDIF}
 
-  {$IFNDEF CODE1}
-  Image1.Width:= SizeX;
-  Image1.Height:= SizeY;
-  Image1.Picture.Bitmap.Width := SizeX;
-  Image1.Picture.Bitmap.Height := SizeY;
-  Image1.Visible := True;
-  {$IFEND}
-
-  {$IFDEF CODE3}
-  Header := GetMem(SizeOf(TBitmapInfoHeader) + (SizeOf(TRGBQuad) * 256));
-  with Header^.bmiHeader do begin
-     biSize := SizeOf(TBitmapInfoHeader);
-     biWidth := SizeX;
-     biHeight := -SizeY;
-     biPlanes := 1;
-     biBitCount := 8;
-     biCompression := BI_RGB;
-     biSizeImage := SizeX * SizeY;
-     biXPelsPerMeter := 0;
-     biYPelsPerMeter := 0;
-     biClrUsed := 0;
-     biClrImportant := 0;
-	end;
-  for I := 0 to ((SizeOf(pal) div 3) - 1) do begin
-     with Header^.bmiColors[I] do begin
-        rgbBlue := pal[I * 3 + 3] shl 2;
-        rgbGreen := pal[I * 3 + 2] shl 2;
-        rgbRed := pal[I * 3 + 1] shl 2;
-     end
-	end;
+  {$IF defined(CODE1) or defined(CODE2)}
+  ComputePalColor;
   {$ENDIF}
 
   {$IFDEF CODE4}
-  Bitmap := TBGRABitmap.Create(SizeX, SizeY, BGRABlack);
+  bgra := TBGRABitmap.Create(SizeX, SizeY, BGRABlack);
+  ComputePalBGRA;
+  {$ENDIF}
+
+  {$IFDEF CODE3}
+  PrepareBitmapHeader;
   {$ENDIF}
 
   {$IFDEF CODE5}
-  IntfImage := TLazIntfImage.Create(SizeX, SizeY, [riqfRGB, riqfAlpha]);
+  IntfImage := TLazIntfImage.Create(SizeX, SizeY, [riqfRGB]);
   IntfImage.CreateData;
-  Temp := TBitmap.Create;
+  ComputePalIntf;
   {$ENDIF}
 
   ClientWidth:= SizeX;
   ClientHeight:= SizeY;
-
-  {$IFNDEF CODE1}
-  UpdateImage;
-  {$IFEND}
 end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
-  {$IFDEF CODE1}
+  {$IF defined(CODE1) or defined(CODE3) or defined(CODE5)}
   bmp.Free;
   {$ENDIF}
   {$IFDEF CODE3}
-   FreeMem(Header);
+  FreeMem(Header);
   {$ENDIF}
   {$IFDEF CODE4}
-  Bitmap.Free;
+  bgra.Free;
   {$ENDIF}
   {$IFDEF CODE5}
   IntfImage.Free;
-  Temp.Free;
   {$ENDIF}
 end;
 
 {$IF defined(CODE1) or defined(CODE2)}
 procedure TForm1.UpdateBitmap(C: TCanvas);
 var
-  NColor, IndexPal: integer;
-  ByteR, ByteG, ByteB: byte;
   i, j: integer;
+  Src: PByte;
 begin
   draw(PosX,PosY,Dir,Scr,MP);
-  for i:= 0 to SizeX-1 do
-    for j:= 0 to SizeY-1 do
+  Src := @Scr;
+  for j:= 0 to SizeY-1 do
+    for i:= 0 to SizeX-1 do
     begin
-      NColor:= Scr[j*SizeX+i];
-      IndexPal:= NColor*3;
-      ByteB:= pal[IndexPal+1] shl 2;
-      ByteG:= pal[IndexPal+2] shl 2;
-      ByteR:= pal[IndexPal+3] shl 2;
-      NColor:= (ByteR shl 16) + (ByteG shl 8) + ByteB;
-      C.Pixels[i, j]:= NColor;
+      C.Pixels[i, j]:= palColor[Src^];
+      inc(Src);
     end;
 end;
-{$IFEND}
+{$ENDIF}
 
 {$IFDEF CODE3}
 procedure TForm1.MyUpdateBitmap(C: TCanvas);
@@ -302,39 +365,28 @@ end;
 {$IFDEF CODE4}
 procedure TForm1.MyUpdateBitmap2(C: TCanvas);
 var
-  NColor, IndexPal: integer;
-  ByteR, ByteG, ByteB: byte;
   i, j: integer;
   Src:PByte;
   Dest:PBGRAPixel;
 begin
   draw(PosX,PosY,Dir,Scr,MP);
-  Dest := Bitmap.Data;
-  Src := @Scr[SizeX*(SizeY - 1)];
+  Src := @Scr;
   for i:= 0 to SizeY-1 do begin
+    Dest := bgra.ScanLine[i];
     for j:= 0 to SizeX-1 do begin
-      NColor:= Src^;
-      IndexPal:= NColor*3;
-      ByteB:= pal[IndexPal+1] shl 2;
-      ByteG:= pal[IndexPal+2] shl 2;
-      ByteR:= pal[IndexPal+3] shl 2;
-      NColor:= (ByteR shl 16) + (ByteG shl 8) + ByteB;
-      Dest^ := NColor;
+      Dest^ := palBGRA[Src^];
       Inc(Src);
       Inc(Dest);
     end;
-    Dec(Src, SizeX * 2);
   end;
-  Bitmap.InvalidateBitmap;
-  Bitmap.Draw(C, 0, 0);
+  bgra.InvalidateBitmap;
+  bgra.Draw(C, 0, 0);
 end;
 {$IFEND}
 
 {$IFDEF CODE5}
 procedure TForm1.MyUpdateBitmap3(C: TCanvas);
 var
-  NColor, IndexPal: integer;
-  ByteR, ByteG, ByteB: byte;
   i, j: integer;
   Src:PByte;
   Dest:PLongword;
@@ -346,21 +398,15 @@ begin
   Src := @Scr;
   for i:= 0 to SizeY-1 do begin
     for j:= 0 to SizeX-1 do begin
-      NColor:= Src^;
-      IndexPal:= NColor*3;
-      ByteB:= pal[IndexPal+1] shl 2;
-      ByteG:= pal[IndexPal+2] shl 2;
-      ByteR:= pal[IndexPal+3] shl 2;
-      NColor:= (ByteB shl 16) + (ByteG shl 8) + ByteR;
-      Dest^ := NColor;
+      Dest^ := palIntf[Src^];
       Inc(Src);
       Inc(Dest);
     end;
   end;
   IntfImage.EndUpdate;
   IntfImage.CreateBitmaps(Bitmap, Mask, True);
-  Temp.Handle := Bitmap;
-  C.Draw(0, 0, Temp);
+  bmp.Handle := Bitmap;
+  C.Draw(0, 0, bmp);
 end;
 {$IFEND}
 
@@ -374,27 +420,19 @@ begin
   {$ENDIF}
 
   {$IFDEF CODE2}
-  Image1.Picture.Bitmap.BeginUpdate(True);
-  UpdateBitmap(Image1.Picture.Bitmap.Canvas);
-  Image1.Picture.Bitmap.EndUpdate;
+  UpdateBitmap(Panel1.Canvas);
   {$ENDIF}
 
   {$IFDEF CODE3}
-  Image1.Picture.Bitmap.BeginUpdate(True);
-  MyUpdateBitmap(Image1.Picture.Bitmap.Canvas);
-  Image1.Picture.Bitmap.EndUpdate;
+  MyUpdateBitmap(Panel1.Canvas);
   {$ENDIF}
 
   {$IFDEF CODE4}
-  Image1.Picture.Bitmap.BeginUpdate(True);
-  MyUpdateBitmap2(Image1.Picture.Bitmap.Canvas);
-  Image1.Picture.Bitmap.EndUpdate;
+  MyUpdateBitmap2(Panel1.Canvas);
   {$ENDIF}
 
   {$IFDEF CODE5}
-  Image1.Picture.Bitmap.BeginUpdate(True);
-  MyUpdateBitmap3(Image1.Picture.Bitmap.Canvas);
-  Image1.Picture.Bitmap.EndUpdate;
+  MyUpdateBitmap3(Panel1.Canvas);
   {$ENDIF}
 
   Caption := FloatToStr((GetCounter - Tick) * 1000 / Freq) + 'ms';
@@ -407,11 +445,7 @@ begin
     dec(Dir,10);
     Dir:=Dir mod 360;
     key:= 0;
-    {$IFDEF CODE1}
     Panel1.Repaint;
-    {$ELSE}
-    UpdateImage;
-    {$ENDIF}
     exit;
   end;
 
@@ -420,11 +454,7 @@ begin
     inc(Dir,10);
     Dir:=Dir mod 360;
     key:= 0;
-    {$IFDEF CODE1}
     Panel1.Repaint;
-    {$ELSE}
-    UpdateImage;
-    {$ENDIF}
     exit;
   end;
 
@@ -433,11 +463,7 @@ begin
     PosY:=PosY+round(5*cos((Dir)/180*pi));
     PosX:=PosX+round(5*sin((Dir)/180*pi));
     key:= 0;
-    {$IFDEF CODE1}
     Panel1.Repaint;
-    {$ELSE}
-    UpdateImage;
-    {$ENDIF}
     exit;
   end;
 
@@ -446,11 +472,7 @@ begin
     PosY:=PosY-round(5*cos((Dir)/180*pi));
     PosX:=PosX-round(5*sin((Dir)/180*pi));
     key:= 0;
-    {$IFDEF CODE1}
     Panel1.Repaint;
-    {$ELSE}
-    UpdateImage;
-    {$ENDIF}
     exit;
   end;
 end;
