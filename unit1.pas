@@ -105,6 +105,7 @@ type
     procedure FormCreate(Sender: TObject);
 		procedure FormDestroy(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormShow(Sender: TObject);
 		procedure Panel1Paint(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure FormKeyPress(Sender: TObject; var Key: char);
@@ -504,8 +505,6 @@ begin
   ComputePalBZScene;
   {$ENDIF}
 
-  ClientWidth:= SizeX;
-  ClientHeight:= SizeY;
   TotalTime := 0;
   FrameCounter := 0;
 end;
@@ -584,7 +583,7 @@ end;
 procedure TForm1.MyUpdateBitmap2(C: TCanvas);
 begin
   drawVoxel(PosX,PosY,Dir,MP);
-  bgra.Draw(C, 0, 0);
+  bgra.Draw(C, Panel1.ClientRect);
 end;
 {$IFEND}
 
@@ -627,7 +626,7 @@ begin
     Rectangle(0,0,SizeX - 1, SizeY -1);
   end;
 
-  C.Draw(0, 0, bmp);
+  C.StretchDraw(Panel1.ClientRect, bmp);
 end;
 {$IFEND}
 
@@ -647,7 +646,7 @@ begin
   Tick := GetCounter;
   {$IFDEF CODE1}
   UpdateBitmap;
-  Panel1.Canvas.Draw(0, 0, bmp);
+  Panel1.Canvas.StretchDraw(Panel1.ClientRect, bmp);
   {$ENDIF}
 
   {$IFDEF CODE2}
@@ -731,6 +730,17 @@ begin
     exit;
   end;
 
+end;
+
+procedure TForm1.FormShow(Sender: TObject);
+begin
+  {$IFDEF CODE2}
+  ClientWidth:= SizeX;
+  ClientHeight:= SizeY;
+  {$ELSE}
+  ClientWidth:= round(SizeX / Panel1.GetCanvasScaleFactor);
+  ClientHeight:= round(SizeY / Panel1.GetCanvasScaleFactor);
+  {$ENDIF}
 end;
 
 procedure TForm1.Panel1Paint(Sender: TObject);
