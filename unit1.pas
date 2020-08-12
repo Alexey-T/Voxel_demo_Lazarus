@@ -429,8 +429,8 @@ begin
 
   for i:=-360 to 360 do
   begin
-    CosMoveLUT[I] := round(5 * System.Sin((Dir)/180*pi));
-    SinMoveLUT[I] := round(5 * System.Cos((Dir)/180*pi));
+    CosMoveLUT[I] := round(5 * System.Cos((Dir)/180*pi));
+    SinMoveLUT[I] := round(5 * System.Sin((Dir)/180*pi));
   End;
 
   for i:=-360 to 360 do
@@ -684,8 +684,6 @@ begin
   begin
     dec(Dir,10);
     Dir := Dir mod 360;
-    PosY := PosY - CosMoveLUT[Dir];
-    PosX := PosX - SinMoveLUT[Dir];
     key:= 0;
     Panel1.Repaint;
     exit;
@@ -695,8 +693,6 @@ begin
   begin
     inc(Dir,10);
     Dir := Dir mod 360;
-    PosY := PosY + CosMoveLUT[Dir];
-    PosX := PosX + SinMoveLUT[Dir];
     key:= 0;
     Panel1.Repaint;
     exit;
@@ -704,7 +700,8 @@ begin
 
   if (Key=VK_UP) and (shift=[]) then
   begin
-    PosY := PosY + 5;
+    PosY := PosY + CosMoveLUT[Dir];
+    PosX := PosX + SinMoveLUT[Dir];
     key:= 0;
     Panel1.Repaint;
     exit;
@@ -712,7 +709,8 @@ begin
 
   if (Key=VK_DOWN) and (shift=[]) then
   begin
-    PosY := PosY - 5;
+    PosY := PosY - CosMoveLUT[Dir];
+    PosX := PosX - SinMoveLUT[Dir];
     key:= 0;
     Panel1.Repaint;
     exit;
