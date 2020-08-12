@@ -680,26 +680,21 @@ end;
 
 procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
-  if (Key=VK_LEFT) and (shift=[]) then
+  if (shift=[ssShift]) then
   begin
     dec(Dir,10);
-    Dir:=Dir mod 360;
+    Dir := Dir mod 360;
+    PosY := PosY - CosMoveLUT[Dir];
+    PosX := PosX - SinMoveLUT[Dir];
     key:= 0;
     Panel1.Repaint;
     exit;
   end;
 
-  if (Key=VK_RIGHT) and (shift=[]) then
+  if (shift=[ssCtrl]) then
   begin
     inc(Dir,10);
-    Dir:=Dir mod 360;
-    key:= 0;
-    Panel1.Repaint;
-    exit;
-  end;
-
-  if (Key=VK_UP) and (shift=[]) then
-  begin
+    Dir := Dir mod 360;
     PosY := PosY + CosMoveLUT[Dir];
     PosX := PosX + SinMoveLUT[Dir];
     key:= 0;
@@ -707,14 +702,38 @@ begin
     exit;
   end;
 
-  if (Key=VK_DOWN) and (shift=[]) then
+  if (Key=VK_UP) and (shift=[]) then
   begin
-    PosY := PosY - CosMoveLUT[Dir];
-    PosX := PosX - SinMoveLUT[Dir];
+    PosY := PosY + 5;
     key:= 0;
     Panel1.Repaint;
     exit;
   end;
+
+  if (Key=VK_DOWN) and (shift=[]) then
+  begin
+    PosY := PosY - 5;
+    key:= 0;
+    Panel1.Repaint;
+    exit;
+  end;
+
+  if (Key=VK_LEFT) and (shift=[]) then
+  begin
+    PosX := PosX - 5;
+    key:= 0;
+    Panel1.Repaint;
+    exit;
+  end;
+
+  if (Key=VK_RIGHT) and (shift=[]) then
+  begin
+    PosX := PosX + 5;
+    key:= 0;
+    Panel1.Repaint;
+    exit;
+  end;
+
 end;
 
 procedure TForm1.Panel1Paint(Sender: TObject);
@@ -777,7 +796,7 @@ procedure TForm1.FormKeyPress(Sender: TObject; var Key: char);
 begin
   if UpCase(Key) = 'A' then
   begin
-    Timer1.Enabled := True;
+    Timer1.Enabled := not(Timer1.Enabled);
   end;
 end;
 
