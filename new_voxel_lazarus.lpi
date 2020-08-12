@@ -9,7 +9,6 @@
       <Title Value="new_voxel_lazarus"/>
       <ResourceType Value="res"/>
       <UseXPManifest Value="True"/>
-      <Icon Value="0"/>
     </General>
     <BuildModes Count="3">
       <Item1 Name="Default" Default="True"/>
@@ -51,6 +50,9 @@
               </Win32>
             </Options>
           </Linking>
+          <Other>
+            <CustomOptions Value="-dUseCThreads"/>
+          </Other>
         </CompilerOptions>
       </Item2>
       <Item3 Name="Release">
@@ -73,6 +75,7 @@
           <Linking>
             <Debugging>
               <GenerateDebugInfo Value="False"/>
+              <StripSymbols Value="True"/>
             </Debugging>
             <LinkSmart Value="True"/>
             <Options>
@@ -81,6 +84,21 @@
               </Win32>
             </Options>
           </Linking>
+          <Other>
+            <CustomOptions Value="-CfSSE3
+-CpCOREAVX
+-OpCOREAVX
+-Sv
+-OoCSE
+-OoNODFA
+-OoFASTMATH
+-OoLOOPUNROLL
+-OoNOPEEPHOLE
+-OoREMOVEEMPTYPROCS
+-OoNOSTACKFRAME
+-OoNOUSERBP
+-dUseCThreads"/>
+          </Other>
         </CompilerOptions>
       </Item3>
     </BuildModes>
@@ -93,13 +111,16 @@
         <Mode0 Name="default"/>
       </Modes>
     </RunParams>
-    <RequiredPackages Count="2">
+    <RequiredPackages Count="3">
       <Item1>
-        <PackageName Value="BGRABitmapPack"/>
+        <PackageName Value="bzscene_image_rt"/>
       </Item1>
       <Item2>
-        <PackageName Value="LCL"/>
+        <PackageName Value="BGRABitmapPack"/>
       </Item2>
+      <Item3>
+        <PackageName Value="LCL"/>
+      </Item3>
     </RequiredPackages>
     <Units Count="2">
       <Unit0>
@@ -136,6 +157,9 @@
         </Win32>
       </Options>
     </Linking>
+    <Other>
+      <CustomOptions Value="-dUseCThreads"/>
+    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="3">
